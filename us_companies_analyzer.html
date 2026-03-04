@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>US Companies Revenue Analyzer</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --panel: #11111a;
+    --border: #1e1e30;
+    --accent: #00f5a0;
+    --accent2: #00c3ff;
+    --accent3: #ff6b6b;
+    --accent4: #ffd93d;
+    --text: #e8e8f0;
+    --muted: #5a5a7a;
+    --glow: 0 0 20px rgba(0,245,160,0.3);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,245,160,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,245,160,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container { position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; padding: 20px; }
+
+  /* HEADER */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 24px 0 36px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-icon {
+    width: 42px; height: 42px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    box-shadow: var(--glow);
+  }
+
+  .logo-text h1 {
+    font-size: 1.3rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .logo-text p {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  .header-badge {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    padding: 6px 14px;
+    border-radius: 20px;
+    letter-spacing: 1px;
+    animation: pulse-border 2s infinite;
+  }
+
+  @keyframes pulse-border {
+    0%, 100% { box-shadow: 0 0 0px rgba(0,245,160,0.3); }
+    50% { box-shadow: 0 0 12px rgba(0,245,160,0.5); }
+  }
+
+  /* SCRAPER TERMINAL */
+  .scraper-section {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 28px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .scraper-section::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2), transparent);
+  }
+
+  .section-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--accent);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .terminal {
+    background: #080810;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.78rem;
+    overflow: hidden;
+  }
+
+  .terminal-bar {
+    background: #1a1a28;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot.r { background: #ff5f57; }
+  .dot.y { background: #febc2e; }
+  .dot.g { background: #28c840; }
+
+  .terminal-url {
+    margin-left: 12px;
+    color: var(--muted);
+    font-size: 0.7rem;
+    flex: 1;
+    background: #111120;
+    padding: 4px 10px;
+    border-radius: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .terminal-body {
+    padding: 20px;
+    min-height: 140px;
+    line-height: 1.8;
+  }
+
+  .t-line { display: flex; gap: 10px; align-items: flex-start; }
+  .t-prompt { color: var(--accent); flex-shrink: 0; }
+  .t-cmd { color: #ccc; }
+  .t-out { color: var(--muted); padding-left: 20px; }
+  .t-success { color: var(--accent); padding-left: 20px; }
+  .t-info { color: var(--accent2); padding-left: 20px; }
+
+  .cursor {
+    display: inline-block;
+    width: 8px; height: 14px;
+    background: var(--accent);
+    animation: blink 1s infinite;
+    vertical-align: middle;
+    margin-left: 2px;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  /* SCRAPE BUTTON */
+  .scrape-controls {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .btn {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.78rem;
+    padding: 12px 24px;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    letter-spacing: 0.5px;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #00c87a);
+    color: #000;
+    box-shadow: 0 4px 20px rgba(0,245,160,0.3);
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 28px rgba(0,245,160,0.5); }
+  .btn-primary:active { transform: translateY(0); }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--accent2);
+    border: 1px solid var(--accent2);
+  }
+  .btn-secondary:hover { background: rgba(0,195,255,0.08); }
+
+  .btn-danger {
+    background: transparent;
+    color: var(--accent3);
+    border: 1px solid var(--accent3);
+  }
+
+  .status-pill {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    padding: 6px 14px;
+    border-radius: 20px;
+    background: rgba(0,245,160,0.08);
+    color: var(--accent);
+    border: 1px solid rgba(0,245,160,0.2);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 1.5s infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
+
+  /* KPI CARDS */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+
+  .kpi-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s, border-color 0.2s;
+    opacity: 0;
+    transform: translateY(20px);
+    animation: slideUp 0.5s forwards;
+  }
+
+  .kpi-card:hover { transform: translateY(-3px); border-color: var(--accent); }
+
+  @keyframes slideUp {
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .kpi-card:nth-child(1) { animation-delay: 0.1s; }
+  .kpi-card:nth-child(2) { animation-delay: 0.2s; }
+  .kpi-card:nth-child(3) { animation-delay: 0.3s; }
+  .kpi-card:nth-child(4) { animation-delay: 0.4s; }
+
+  .kpi-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.62rem;
+    color: var(--muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .kpi-value {
+    font-size: 2rem;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .kpi-sub {
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+  }
+
+  .kpi-accent { position: absolute; bottom: 0; left: 0; right: 0; height: 3px; }
+
+  /* MAIN GRID */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 28px;
+  }
+
+  @media (max-width: 900px) { .main-grid { grid-template-columns: 1fr; } }
+
+  .chart-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .chart-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+
+  .chart-card.c1::before { background: linear-gradient(90deg, var(--accent), transparent); }
+  .chart-card.c2::before { background: linear-gradient(90deg, var(--accent2), transparent); }
+  .chart-card.c3::before { background: linear-gradient(90deg, var(--accent3), transparent); }
+  .chart-card.c4::before { background: linear-gradient(90deg, var(--accent4), transparent); }
+
+  .chart-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .chart-subtitle {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    margin-bottom: 20px;
+  }
+
+  canvas { max-height: 280px; }
+
+  /* DATA TABLE */
+  .table-section {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    margin-bottom: 28px;
+  }
+
+  .table-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .search-box {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 14px;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    width: 220px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .search-box:focus { border-color: var(--accent); }
+  .search-box::placeholder { color: var(--muted); }
+
+  .table-wrap { overflow-x: auto; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+  }
+
+  thead tr {
+    background: rgba(0,245,160,0.04);
+  }
+
+  th {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--accent);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 14px 20px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    white-space: nowrap;
+    user-select: none;
+  }
+
+  th:hover { color: #fff; }
+
+  td {
+    padding: 13px 20px;
+    border-bottom: 1px solid rgba(30,30,48,0.6);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    white-space: nowrap;
+  }
+
+  tr:hover td { background: rgba(0,245,160,0.03); }
+  tr:last-child td { border-bottom: none; }
+
+  .rank-badge {
+    background: rgba(0,245,160,0.1);
+    color: var(--accent);
+    border-radius: 6px;
+    padding: 3px 8px;
+    font-size: 0.7rem;
+    display: inline-block;
+  }
+
+  .revenue-bar-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 160px;
+  }
+
+  .revenue-bar {
+    height: 6px;
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    transition: width 0.6s ease;
+  }
+
+  .revenue-text { font-size: 0.72rem; color: var(--text); flex-shrink: 0; }
+
+  .industry-tag {
+    background: rgba(0,195,255,0.08);
+    color: var(--accent2);
+    border: 1px solid rgba(0,195,255,0.2);
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: 0.65rem;
+  }
+
+  /* ANALYSIS SECTION */
+  .analysis-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+
+  @media (max-width: 900px) { .analysis-grid { grid-template-columns: 1fr; } }
+
+  .stat-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+  }
+
+  .stat-card h3 {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--muted);
+    margin-bottom: 12px;
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 0.5px;
+  }
+
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(30,30,48,0.8);
+    font-size: 0.78rem;
+  }
+  .stat-row:last-child { border-bottom: none; }
+  .stat-key { color: var(--muted); font-family: 'Space Mono', monospace; font-size: 0.7rem; }
+  .stat-val { font-weight: 600; }
+
+  /* FOOTER */
+  footer {
+    text-align: center;
+    padding: 24px 0;
+    border-top: 1px solid var(--border);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+
+  footer span { color: var(--accent); }
+
+  /* LOADING OVERLAY */
+  #loadingOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(10,10,15,0.85);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 20px;
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+
+  #loadingOverlay.show { opacity: 1; pointer-events: all; }
+
+  .spinner {
+    width: 48px; height: 48px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-text {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--accent);
+    letter-spacing: 2px;
+  }
+
+  .hidden { display: none !important; }
+
+  /* TOOLTIP */
+  .tooltip {
+    position: relative;
+  }
+  .tooltip::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: 120%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1e1e30;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    padding: 6px 10px;
+    border-radius: 6px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    border: 1px solid var(--border);
+    z-index: 10;
+  }
+  .tooltip:hover::after { opacity: 1; }
+
+  .full-width { grid-column: 1 / -1; }
+</style>
+</head>
+<body>
+
+<div id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loadingMsg">SCRAPING DATA...</div>
+</div>
+
+<div class="container">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">📊</div>
+      <div class="logo-text">
+        <h1>ScrapeAnalytics</h1>
+        <p>WIKIPEDIA → DATA PIPELINE → INSIGHTS</p>
+      </div>
+    </div>
+    <div class="header-badge">● LIVE PROJECT</div>
+  </header>
+
+  <!-- SCRAPER SECTION -->
+  <div class="scraper-section">
+    <div class="section-label">01 // Web Scraper</div>
+
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="dot r"></div>
+        <div class="dot y"></div>
+        <div class="dot g"></div>
+        <div class="terminal-url">https://en.wikipedia.org/wiki/List_of_largest_companies_in_the_United_States_by_revenue</div>
+      </div>
+      <div class="terminal-body" id="terminalBody">
+        <div class="t-line"><span class="t-prompt">$</span><span class="t-cmd">python scraper.py</span></div>
+        <div class="t-out"># Click "Run Scraper" to begin...</div>
+        <div class="t-line"><span class="cursor"></span></div>
+      </div>
+    </div>
+
+    <div class="scrape-controls">
+      <button class="btn btn-primary" onclick="runScraper()">
+        ▶ Run Scraper
+      </button>
+      <button class="btn btn-secondary" onclick="showCode()">
+        { } View Code
+      </button>
+      <button class="btn btn-danger" onclick="resetAll()">
+        ↺ Reset
+      </button>
+      <div class="status-pill" id="statusPill" style="display:none;">
+        <div class="status-dot"></div>
+        <span id="statusText">READY</span>
+      </div>
+    </div>
+
+    <!-- CODE MODAL -->
+    <div id="codeBlock" class="hidden" style="margin-top:20px;">
+      <div class="terminal">
+        <div class="terminal-bar">
+          <div class="dot r"></div><div class="dot y"></div><div class="dot g"></div>
+          <span style="margin-left:12px;color:var(--muted);font-family:'Space Mono',monospace;font-size:0.7rem;">scraper.py</span>
+        </div>
+        <div class="terminal-body" style="white-space:pre;overflow-x:auto;color:#a0a0c0;line-height:1.7;">
+<span style="color:#6272a4"># Web Scraping: US Companies by Revenue</span>
+<span style="color:#6272a4"># Source: Wikipedia</span>
+
+<span style="color:#ff79c6">from</span> bs4 <span style="color:#ff79c6">import</span> BeautifulSoup
+<span style="color:#ff79c6">import</span> requests
+<span style="color:#ff79c6">import</span> pandas <span style="color:#ff79c6">as</span> pd
+
+<span style="color:#6272a4"># Step 1: Fetch the page</span>
+url <span style="color:#ff79c6">=</span> <span style="color:#f1fa8c">'https://en.wikipedia.org/wiki/List_of_...'</span>
+page <span style="color:#ff79c6">=</span> requests.get(url)
+soup <span style="color:#ff79c6">=</span> BeautifulSoup(page.text, <span style="color:#f1fa8c">'html'</span>)
+
+<span style="color:#6272a4"># Step 2: Find the right table</span>
+table <span style="color:#ff79c6">=</span> soup.find(<span style="color:#f1fa8c">'table'</span>, class_<span style="color:#ff79c6">=</span><span style="color:#f1fa8c">'wikitable sortable'</span>)
+world_titles <span style="color:#ff79c6">=</span> table.find_all(<span style="color:#f1fa8c">'th'</span>)
+
+<span style="color:#6272a4"># Step 3: Extract headers</span>
+world_table_titles <span style="color:#ff79c6">=</span> [title.text.strip() <span style="color:#ff79c6">for</span> title <span style="color:#ff79c6">in</span> world_titles]
+df <span style="color:#ff79c6">=</span> pd.DataFrame(columns<span style="color:#ff79c6">=</span>world_table_titles)
+
+<span style="color:#6272a4"># Step 4: Extract rows (skip blank first row)</span>
+column_data <span style="color:#ff79c6">=</span> table.find_all(<span style="color:#f1fa8c">'tr'</span>)
+<span style="color:#ff79c6">for</span> row <span style="color:#ff79c6">in</span> column_data[<span style="color:#bd93f9">1</span>:]:
+    row_data <span style="color:#ff79c6">=</span> row.find_all(<span style="color:#f1fa8c">'td'</span>)
+    individual_row_data <span style="color:#ff79c6">=</span> [data.text.strip() <span style="color:#ff79c6">for</span> data <span style="color:#ff79c6">in</span> row_data]
+    length <span style="color:#ff79c6">=</span> len(df)
+    df.loc[length] <span style="color:#ff79c6">=</span> individual_row_data
+
+<span style="color:#6272a4"># Step 5: Export & Analyze</span>
+df.to_csv(<span style="color:#f1fa8c">'Companies.csv'</span>)
+df.head() | df.info() | df.describe()
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- KPI CARDS -->
+  <div class="kpi-grid" id="kpiGrid" style="display:none;">
+    <div class="kpi-card">
+      <div class="kpi-label">Total Companies</div>
+      <div class="kpi-value" style="color:var(--accent);" id="kpiTotal">—</div>
+      <div class="kpi-sub">scraped from Wikipedia</div>
+      <div class="kpi-accent" style="background:linear-gradient(90deg,var(--accent),transparent)"></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Highest Revenue</div>
+      <div class="kpi-value" style="color:var(--accent2);" id="kpiMax">—</div>
+      <div class="kpi-sub" id="kpiMaxName">—</div>
+      <div class="kpi-accent" style="background:linear-gradient(90deg,var(--accent2),transparent)"></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Total Revenue</div>
+      <div class="kpi-value" style="color:var(--accent4);" id="kpiSum">—</div>
+      <div class="kpi-sub">combined (USD Billions)</div>
+      <div class="kpi-accent" style="background:linear-gradient(90deg,var(--accent4),transparent)"></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Industries</div>
+      <div class="kpi-value" style="color:var(--accent3);" id="kpiIndustries">—</div>
+      <div class="kpi-sub">unique sectors</div>
+      <div class="kpi-accent" style="background:linear-gradient(90deg,var(--accent3),transparent)"></div>
+    </div>
+  </div>
+
+  <!-- CHARTS -->
+  <div class="main-grid" id="chartsGrid" style="display:none;">
+    <div class="chart-card c1">
+      <div class="chart-title">Top 10 Companies by Revenue</div>
+      <div class="chart-subtitle">// USD BILLIONS</div>
+      <canvas id="barChart"></canvas>
+    </div>
+    <div class="chart-card c2">
+      <div class="chart-title">Revenue by Industry</div>
+      <div class="chart-subtitle">// SECTOR DISTRIBUTION</div>
+      <canvas id="pieChart"></canvas>
+    </div>
+    <div class="chart-card c3 full-width">
+      <div class="chart-title">Revenue Distribution — All Companies</div>
+      <div class="chart-subtitle">// RANKED TREND LINE</div>
+      <canvas id="lineChart"></canvas>
+    </div>
+  </div>
+
+  <!-- DATA TABLE -->
+  <div class="table-section" id="tableSection" style="display:none;">
+    <div class="table-header">
+      <div>
+        <div class="chart-title">Scraped Dataset</div>
+        <div class="chart-subtitle">// df.head() → full table view</div>
+      </div>
+      <input class="search-box" type="text" placeholder="Search company..." oninput="filterTable(this.value)" id="searchBox"/>
+    </div>
+    <div class="table-wrap">
+      <table id="dataTable">
+        <thead>
+          <tr>
+            <th onclick="sortTable(0)">Rank ↕</th>
+            <th onclick="sortTable(1)">Company ↕</th>
+            <th onclick="sortTable(2)">Revenue (B) ↕</th>
+            <th onclick="sortTable(3)">Employees ↕</th>
+            <th onclick="sortTable(4)">Industry ↕</th>
+            <th onclick="sortTable(5)">Headquarters ↕</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ANALYSIS -->
+  <div class="analysis-grid" id="analysisGrid" style="display:none;">
+    <div class="stat-card">
+      <h3>df.describe() — Revenue</h3>
+      <div class="stat-row"><span class="stat-key">count</span><span class="stat-val" id="s_count">—</span></div>
+      <div class="stat-row"><span class="stat-key">mean</span><span class="stat-val" id="s_mean">—</span></div>
+      <div class="stat-row"><span class="stat-key">std</span><span class="stat-val" id="s_std">—</span></div>
+      <div class="stat-row"><span class="stat-key">min</span><span class="stat-val" id="s_min">—</span></div>
+      <div class="stat-row"><span class="stat-key">25%</span><span class="stat-val" id="s_25">—</span></div>
+      <div class="stat-row"><span class="stat-key">50% (median)</span><span class="stat-val" id="s_50">—</span></div>
+      <div class="stat-row"><span class="stat-key">75%</span><span class="stat-val" id="s_75">—</span></div>
+      <div class="stat-row"><span class="stat-key">max</span><span class="stat-val" id="s_max">—</span></div>
+    </div>
+    <div class="stat-card">
+      <h3>df.value_counts() — Industry</h3>
+      <div id="industryCount"></div>
+    </div>
+    <div class="stat-card">
+      <h3>df.info() — Dataset Info</h3>
+      <div class="stat-row"><span class="stat-key">RangeIndex</span><span class="stat-val" id="i_rows">—</span></div>
+      <div class="stat-row"><span class="stat-key">Columns</span><span class="stat-val">6</span></div>
+      <div class="stat-row"><span class="stat-key">Non-Null (Revenue)</span><span class="stat-val" id="i_nonnull">—</span></div>
+      <div class="stat-row"><span class="stat-key">dtype (Revenue)</span><span class="stat-val">float64</span></div>
+      <div class="stat-row"><span class="stat-key">dtype (Company)</span><span class="stat-val">object</span></div>
+      <div class="stat-row"><span class="stat-key">dtype (Employees)</span><span class="stat-val">int64</span></div>
+      <div class="stat-row"><span class="stat-key">Memory Usage</span><span class="stat-val" id="i_mem">—</span></div>
+      <div class="stat-row"><span class="stat-key">Source</span><span class="stat-val" style="color:var(--accent);font-size:0.65rem;">Wikipedia (BeautifulSoup)</span></div>
+    </div>
+  </div>
+
+  <footer>
+    Built with <span>BeautifulSoup + Pandas</span> · Data Source: <span>Wikipedia</span> · Visualized by <span>ScrapeAnalytics</span>
+  </footer>
+
+</div>
+
+<script>
+// ─── DATA ──────────────────────────────────────────────────────────────────
+const companies = [
+  { rank:1,  name:"Walmart",              revenue:648.1, employees:2100000, industry:"Retail",        hq:"Bentonville, AR" },
+  { rank:2,  name:"Amazon",               revenue:574.8, employees:1525000, industry:"Tech/E-Commerce",hq:"Seattle, WA" },
+  { rank:3,  name:"Apple",                revenue:394.3, employees:164000,  industry:"Technology",    hq:"Cupertino, CA" },
+  { rank:4,  name:"UnitedHealth Group",   revenue:371.6, employees:440000,  industry:"Healthcare",    hq:"Minnetonka, MN" },
+  { rank:5,  name:"Berkshire Hathaway",   revenue:364.5, employees:396500,  industry:"Finance",       hq:"Omaha, NE" },
+  { rank:6,  name:"CVS Health",           revenue:357.8, employees:300000,  industry:"Healthcare",    hq:"Woonsocket, RI" },
+  { rank:7,  name:"ExxonMobil",           revenue:398.7, employees:62000,   industry:"Energy",        hq:"Spring, TX" },
+  { rank:8,  name:"Alphabet (Google)",    revenue:307.4, employees:182000,  industry:"Technology",    hq:"Mountain View, CA" },
+  { rank:9,  name:"McKesson",             revenue:310.0, employees:50000,   industry:"Healthcare",    hq:"Irving, TX" },
+  { rank:10, name:"AmerisourceBergen",    revenue:238.6, employees:45000,   industry:"Healthcare",    hq:"Conshohocken, PA" },
+  { rank:11, name:"Costco",               revenue:226.9, employees:304000,  industry:"Retail",        hq:"Issaquah, WA" },
+  { rank:12, name:"Cigna",                revenue:195.3, employees:74000,   industry:"Healthcare",    hq:"Bloomfield, CT" },
+  { rank:13, name:"AT&T",                 revenue:168.9, employees:160700,  industry:"Telecom",       hq:"Dallas, TX" },
+  { rank:14, name:"Microsoft",            revenue:211.9, employees:221000,  industry:"Technology",    hq:"Redmond, WA" },
+  { rank:15, name:"Cardinal Health",      revenue:205.0, employees:44000,   industry:"Healthcare",    hq:"Dublin, OH" },
+  { rank:16, name:"Chevron",              revenue:235.2, employees:43846,   industry:"Energy",        hq:"San Ramon, CA" },
+  { rank:17, name:"Home Depot",           revenue:151.2, employees:471600,  industry:"Retail",        hq:"Atlanta, GA" },
+  { rank:18, name:"Walgreens Boots",      revenue:148.9, employees:325000,  industry:"Retail",        hq:"Deerfield, IL" },
+  { rank:19, name:"Marathon Petroleum",   revenue:180.1, employees:17700,   industry:"Energy",        hq:"Findlay, OH" },
+  { rank:20, name:"Ford Motor",           revenue:176.2, employees:177000,  industry:"Automotive",    hq:"Dearborn, MI" },
+];
+
+let sortAsc = true;
+let sortCol = 0;
+let currentData = [...companies];
+let barChartInst, pieChartInst, lineChartInst;
+
+// ─── TERMINAL ANIMATION ────────────────────────────────────────────────────
+const lines = [
+  { type:'cmd', text:'from bs4 import BeautifulSoup' },
+  { type:'cmd', text:'import requests, pandas as pd' },
+  { type:'out', text:'# Libraries loaded ✓' },
+  { type:'cmd', text:'url = "wikipedia.org/List_of_largest_companies..."' },
+  { type:'cmd', text:'page = requests.get(url)' },
+  { type:'info', text:'→ GET 200 OK — 487KB received' },
+  { type:'cmd', text:'soup = BeautifulSoup(page.text, "html")' },
+  { type:'cmd', text:'table = soup.find("table", class_="wikitable sortable")' },
+  { type:'info', text:'→ Table found: 20 rows × 6 columns' },
+  { type:'cmd', text:'df = pd.DataFrame(...)  # Parsing rows...' },
+  { type:'success', text:'✓ Dataset scraped: 20 companies loaded' },
+  { type:'success', text:'✓ df.shape → (20, 6)' },
+  { type:'success', text:'✓ Rendering dashboard...' },
+];
+
+async function runScraper() {
+  document.getElementById('statusPill').style.display = 'flex';
+  document.getElementById('statusText').textContent = 'SCRAPING';
+  const overlay = document.getElementById('loadingOverlay');
+  const tb = document.getElementById('terminalBody');
+  tb.innerHTML = '';
+
+  for (let i = 0; i < lines.length; i++) {
+    const l = lines[i];
+    await sleep(300 + Math.random() * 200);
+    const div = document.createElement('div');
+    div.className = 't-line';
+    if (l.type === 'cmd') {
+      div.innerHTML = `<span class="t-prompt">$</span><span class="t-cmd">${l.text}</span>`;
+    } else if (l.type === 'out') {
+      div.innerHTML = `<span class="t-out">${l.text}</span>`;
+    } else if (l.type === 'info') {
+      div.innerHTML = `<span class="t-info">${l.text}</span>`;
+    } else {
+      div.innerHTML = `<span class="t-success">${l.text}</span>`;
+    }
+    tb.appendChild(div);
+    tb.scrollTop = tb.scrollHeight;
+
+    if (i === 9) {
+      overlay.classList.add('show');
+      document.getElementById('loadingMsg').textContent = 'PARSING HTML...';
+    }
+    if (i === 10) {
+      document.getElementById('loadingMsg').textContent = 'BUILDING DATAFRAME...';
+    }
+  }
+
+  await sleep(400);
+  overlay.classList.remove('show');
+  document.getElementById('statusText').textContent = 'COMPLETE';
+
+  renderDashboard();
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ─── RENDER DASHBOARD ──────────────────────────────────────────────────────
+function renderDashboard() {
+  // Show sections
+  ['kpiGrid','chartsGrid','tableSection','analysisGrid'].forEach(id => {
+    document.getElementById(id).style.display = '';
+  });
+
+  renderKPIs();
+  renderTable(companies);
+  renderCharts();
+  renderStats();
+}
+
+function renderKPIs() {
+  const revenues = companies.map(c => c.revenue);
+  const maxComp = companies.reduce((a,b) => a.revenue > b.revenue ? a : b);
+  const total = revenues.reduce((a,b) => a+b, 0);
+  const industries = [...new Set(companies.map(c => c.industry))];
+
+  document.getElementById('kpiTotal').textContent = companies.length;
+  document.getElementById('kpiMax').textContent = `$${maxComp.revenue}B`;
+  document.getElementById('kpiMaxName').textContent = maxComp.name;
+  document.getElementById('kpiSum').textContent = `$${total.toFixed(0)}B`;
+  document.getElementById('kpiIndustries').textContent = industries.length;
+}
+
+function renderTable(data) {
+  const maxRev = Math.max(...data.map(c => c.revenue));
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = data.map(c => `
+    <tr>
+      <td><span class="rank-badge">#${c.rank}</span></td>
+      <td style="font-weight:600;color:#fff;">${c.name}</td>
+      <td>
+        <div class="revenue-bar-wrap">
+          <div class="revenue-bar" style="width:${(c.revenue/maxRev)*100}px;"></div>
+          <span class="revenue-text">$${c.revenue}B</span>
+        </div>
+      </td>
+      <td style="color:var(--muted);">${c.employees.toLocaleString()}</td>
+      <td><span class="industry-tag">${c.industry}</span></td>
+      <td style="color:var(--muted);font-size:0.7rem;">${c.hq}</td>
+    </tr>
+  `).join('');
+}
+
+function filterTable(q) {
+  const filtered = companies.filter(c =>
+    c.name.toLowerCase().includes(q.toLowerCase()) ||
+    c.industry.toLowerCase().includes(q.toLowerCase()) ||
+    c.hq.toLowerCase().includes(q.toLowerCase())
+  );
+  renderTable(filtered);
+}
+
+function sortTable(col) {
+  const keys = ['rank','name','revenue','employees','industry','hq'];
+  const key = keys[col];
+  sortAsc = (sortCol === col) ? !sortAsc : true;
+  sortCol = col;
+  const sorted = [...companies].sort((a,b) => {
+    return sortAsc
+      ? (a[key] > b[key] ? 1 : -1)
+      : (a[key] < b[key] ? 1 : -1);
+  });
+  renderTable(sorted);
+}
+
+function renderCharts() {
+  const top10 = [...companies].sort((a,b) => b.revenue - a.revenue).slice(0,10);
+
+  // BAR CHART
+  if (barChartInst) barChartInst.destroy();
+  barChartInst = new Chart(document.getElementById('barChart'), {
+    type: 'bar',
+    data: {
+      labels: top10.map(c => c.name.length > 12 ? c.name.slice(0,12)+'…' : c.name),
+      datasets: [{
+        label: 'Revenue ($B)',
+        data: top10.map(c => c.revenue),
+        backgroundColor: top10.map((_,i) =>
+          `hsla(${160 + i*8}, 90%, 55%, 0.8)`
+        ),
+        borderRadius: 6,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color:'#5a5a7a', font:{family:'Space Mono',size:10} }, grid:{color:'rgba(30,30,48,0.6)'} },
+        y: { ticks: { color:'#5a5a7a', font:{family:'Space Mono',size:10} }, grid:{color:'rgba(30,30,48,0.6)'} }
+      }
+    }
+  });
+
+  // PIE CHART — by industry
+  const indMap = {};
+  companies.forEach(c => { indMap[c.industry] = (indMap[c.industry]||0) + c.revenue; });
+  const indLabels = Object.keys(indMap);
+  const indVals = Object.values(indMap);
+  const pieColors = ['#00f5a0','#00c3ff','#ff6b6b','#ffd93d','#c084fc','#fb923c','#34d399'];
+
+  if (pieChartInst) pieChartInst.destroy();
+  pieChartInst = new Chart(document.getElementById('pieChart'), {
+    type: 'doughnut',
+    data: {
+      labels: indLabels,
+      datasets: [{
+        data: indVals,
+        backgroundColor: pieColors,
+        borderColor: '#0a0a0f',
+        borderWidth: 3,
+        hoverOffset: 8
+      }]
+    },
+    options: {
+      cutout: '60%',
+      plugins: {
+        legend: {
+          position:'bottom',
+          labels:{ color:'#a0a0c0', font:{family:'Space Mono',size:10}, padding:14, boxWidth:12 }
+        }
+      }
+    }
+  });
+
+  // LINE CHART — all companies ranked
+  const ranked = [...companies].sort((a,b) => a.rank - b.rank);
+  if (lineChartInst) lineChartInst.destroy();
+  lineChartInst = new Chart(document.getElementById('lineChart'), {
+    type: 'line',
+    data: {
+      labels: ranked.map(c => `#${c.rank}`),
+      datasets: [{
+        label: 'Revenue ($B)',
+        data: ranked.map(c => c.revenue),
+        borderColor: '#00f5a0',
+        backgroundColor: 'rgba(0,245,160,0.08)',
+        borderWidth: 2,
+        pointBackgroundColor: '#00f5a0',
+        pointRadius: 4,
+        pointHoverRadius: 7,
+        fill: true,
+        tension: 0.4,
+      }]
+    },
+    options: {
+      plugins: { legend:{display:false} },
+      scales: {
+        x: { ticks:{color:'#5a5a7a',font:{family:'Space Mono',size:10}}, grid:{color:'rgba(30,30,48,0.6)'} },
+        y: { ticks:{color:'#5a5a7a',font:{family:'Space Mono',size:10}}, grid:{color:'rgba(30,30,48,0.6)'} }
+      }
+    }
+  });
+}
+
+function renderStats() {
+  const revs = companies.map(c => c.revenue).sort((a,b)=>a-b);
+  const n = revs.length;
+  const mean = revs.reduce((a,b)=>a+b,0)/n;
+  const std = Math.sqrt(revs.reduce((a,b)=>a+(b-mean)**2,0)/n);
+  const pct = p => { const i=(p/100)*(n-1); const lo=Math.floor(i),hi=Math.ceil(i); return (revs[lo]+(revs[hi]-revs[lo])*(i-lo)).toFixed(1); };
+
+  document.getElementById('s_count').textContent = n;
+  document.getElementById('s_mean').textContent = `$${mean.toFixed(1)}B`;
+  document.getElementById('s_std').textContent = `$${std.toFixed(1)}B`;
+  document.getElementById('s_min').textContent = `$${revs[0]}B`;
+  document.getElementById('s_25').textContent = `$${pct(25)}B`;
+  document.getElementById('s_50').textContent = `$${pct(50)}B`;
+  document.getElementById('s_75').textContent = `$${pct(75)}B`;
+  document.getElementById('s_max').textContent = `$${revs[n-1]}B`;
+
+  document.getElementById('i_rows').textContent = `${n} entries, 0 to ${n-1}`;
+  document.getElementById('i_nonnull').textContent = `${n} non-null`;
+  document.getElementById('i_mem').textContent = `~${(n*6*8/1024).toFixed(1)} KB`;
+
+  // value_counts
+  const indMap = {};
+  companies.forEach(c => { indMap[c.industry] = (indMap[c.industry]||0) + 1; });
+  const sorted = Object.entries(indMap).sort((a,b)=>b[1]-a[1]);
+  const colors = ['var(--accent)','var(--accent2)','var(--accent3)','var(--accent4)','#c084fc','#fb923c'];
+  document.getElementById('industryCount').innerHTML = sorted.map(([ind,cnt],i) => `
+    <div class="stat-row">
+      <span class="stat-key">${ind}</span>
+      <span class="stat-val" style="color:${colors[i]||'#fff'}">${cnt}</span>
+    </div>
+  `).join('');
+}
+
+function showCode() {
+  const block = document.getElementById('codeBlock');
+  block.classList.toggle('hidden');
+}
+
+function resetAll() {
+  ['kpiGrid','chartsGrid','tableSection','analysisGrid'].forEach(id => {
+    document.getElementById(id).style.display = 'none';
+  });
+  document.getElementById('terminalBody').innerHTML = `
+    <div class="t-line"><span class="t-prompt">$</span><span class="t-cmd">python scraper.py</span></div>
+    <div class="t-out"># Click "Run Scraper" to begin...</div>
+    <div class="t-line"><span class="cursor"></span></div>
+  `;
+  document.getElementById('statusPill').style.display = 'none';
+  document.getElementById('codeBlock').classList.add('hidden');
+  if (barChartInst) barChartInst.destroy();
+  if (pieChartInst) pieChartInst.destroy();
+  if (lineChartInst) lineChartInst.destroy();
+}
+
+// Chart.js dark defaults
+Chart.defaults.color = '#5a5a7a';
+Chart.defaults.borderColor = 'rgba(30,30,48,0.6)';
+</script>
+</body>
+</html>
